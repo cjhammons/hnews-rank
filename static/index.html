@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hacker News Story Search</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f6f6ef;
+        }
+        .search-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #ff6600;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #e65c00;
+        }
+        .story {
+            background-color: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .story h2 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+        }
+        .story a {
+            color: #ff6600;
+            text-decoration: none;
+        }
+        .story a:hover {
+            text-decoration: underline;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .error {
+            color: #ff0000;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <h1>Hacker News Story Search</h1>
+        <input type="text" id="searchInput" placeholder="Enter your search query...">
+        <button onclick="searchStories()">Search</button>
+    </div>
+    <div id="loading" class="loading">Searching...</div>
+    <div id="error" class="error"></div>
+    <div id="results"></div>
+
+    <script>
+        async function searchStories() {
+            const query = document.getElementById('searchInput').value;
+            console.log('Searching for:', query);
+            
+            if (!query) {
+                document.getElementById('error').textContent = 'Please enter a search query';
+                return;
+            }
+
+            // Show loading state
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').textContent = '';
+            document.getElementById('results').innerHTML = '';
+
+            try {
+                console.log('Fetching from:', `http://localhost:8081/search?q=${encodeURIComponent(query)}`);
+                const response = await fetch(`http://localhost:8081/search?q=${encodeURIComponent(query)}`);
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`Search failed with status: ${response.status}`);
+                }
+                
+                const stories = await response.json();
+                console.log('Received stories:', stories);
+                
+                // Display results
+                const resultsDiv = document.getElementById('results');
+                stories.forEach(story => {
+                    const storyDiv = document.createElement('div');
+                    storyDiv.className = 'story';
+                    storyDiv.innerHTML = `
+                        <h2><a href="${story.url}" target="_blank">${story.title}</a></h2>
+                        ${story.text ? `<p>${story.text}</p>` : ''}
+                    `;
+                    resultsDiv.appendChild(storyDiv);
+                });
+            } catch (error) {
+                console.error('Search error:', error);
+                document.getElementById('error').textContent = 'Failed to search stories. Please try again.';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Add event listener for Enter key
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchStories();
+            }
+        });
+    </script>
+</body>
+</html> 

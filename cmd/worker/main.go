@@ -23,7 +23,6 @@ func main() {
 	ctx := context.Background()
 
 	// Initialize clients
-	hnClient := hn.NewClient()
 	vertexClient, err := vertex.NewClient(ctx)
 	if err != nil {
 		log.Fatalf("Failed to create VertexAI client: %v", err)
@@ -40,72 +39,69 @@ func main() {
 	}
 	defer vectorDB.Close()
 
-	// Run the worker loop
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
+	// Create HackerNews client
+	hnClient := hn.NewClient()
 
+	// Process stories
 	for {
-		if err := processStories(ctx, hnClient, vertexClient, vectorDB); err != nil {
-			log.Printf("Error processing stories: %v", err)
-		}
-
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			continue
-		}
-	}
-}
-
-// processStories handles the main processing loop for HN stories.
-// It fetches top stories, generates embeddings, and stores them in the vector database.
-// Returns any error encountered during processing.
-func processStories(ctx context.Context, hnClient hn.Client, vertexClient *vertex.Client, vectorDB db.VectorDB) error {
-	// Get top stories
-	storyIDs, err := hnClient.GetTopStories()
-	if err != nil {
-		return err
-	}
-
-	// Process each story
-	for _, id := range storyIDs {
-		story, err := hnClient.GetStory(id)
+		// Get top stories
+		storyIDs, err := hnClient.GetTopStories()
 		if err != nil {
-			log.Printf("Error fetching story %d: %v", id, err)
+			log.Printf("Error getting top stories: %v", err)
+			time.Sleep(5 * time.Minute) // Wait 5 minutes before retrying
 			continue
 		}
 
-		// Skip non-story items
-		if story.Type != "story" {
-			continue
+		// Process each story
+		for _, id := range storyIDs {
+			// Get story details
+			story, err := hnClient.GetStory(id)
+			if err != nil {
+				log.Printf("Error fetching story %d: %v", id, err)
+				continue
+			}
+
+			// Skip non-story items
+			if story.Type != "story" {
+				continue
+			}
+
+			// Generate embedding for the story
+			text := story.Title
+			if story.Text != "" {
+				text += " " + story.Text
+			}
+
+			embedding, err := vertexClient.GenerateEmbedding(ctx, text)
+			if err != nil {
+				log.Printf("Error generating embedding for story %d: %v", id, err)
+				// If we hit the quota, wait longer before retrying
+				if err.Error() == "rpc error: code = ResourceExhausted" {
+					log.Println("Hit model quota, waiting 5 minutes before retrying...")
+					time.Sleep(5 * time.Minute)
+					continue
+				}
+				continue
+			}
+
+			// Store the story with its embedding
+			storyWithEmbedding := &hn.StoryWithEmbedding{
+				Story:     *story,
+				Embedding: embedding,
+			}
+			if err := vectorDB.StoreStory(ctx, storyWithEmbedding); err != nil {
+				log.Printf("Error storing story %d: %v", id, err)
+				continue
+			}
+
+			log.Printf("Successfully processed story %d", id)
+
+			// Sleep for 1 second between stories to avoid hitting the quota
+			time.Sleep(time.Second)
 		}
 
-		// Generate embedding
-		text := story.Title
-		if story.Text != "" {
-			text += " " + story.Text
-		}
-
-		embedding, err := vertexClient.GenerateEmbedding(ctx, text)
-		if err != nil {
-			log.Printf("Error generating embedding for story %d: %v", id, err)
-			continue
-		}
-
-		// Store in vector database
-		storyWithEmbedding := &hn.StoryWithEmbedding{
-			Story:     *story,
-			Embedding: embedding,
-		}
-
-		if err := vectorDB.StoreStory(ctx, storyWithEmbedding); err != nil {
-			log.Printf("Error storing story %d: %v", id, err)
-			continue
-		}
-
-		log.Printf("Successfully processed story %d", id)
+		// Wait 5 minutes before checking for new stories
+		log.Println("Waiting 5 minutes before checking for new stories...")
+		time.Sleep(5 * time.Minute)
 	}
-
-	return nil
 }
