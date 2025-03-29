@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hn-rank
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hn-rank
+  template:
+    metadata:
+      labels:
+        app: hn-rank
+    spec:
+      containers:
+      - name: api
+        image: hn-rank:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: VERTEX_AI_PROJECT
+          valueFrom:
+            secretKeyRef:
+              name: hn-rank-secrets
+              key: vertex-ai-project
+        - name: VERTEX_AI_LOCATION
+          valueFrom:
+            secretKeyRef:
+              name: hn-rank-secrets
+              key: vertex-ai-location
+        - name: VECTOR_DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: hn-rank-secrets
+              key: vector-db-url
+      - name: worker
+        image: hn-rank:latest
+        command: ["/app/worker"]
+        env:
+        - name: VERTEX_AI_PROJECT
+          valueFrom:
+            secretKeyRef:
+              name: hn-rank-secrets
+              key: vertex-ai-project
+        - name: VERTEX_AI_LOCATION
+          valueFrom:
+            secretKeyRef:
+              name: hn-rank-secrets
+              key: vertex-ai-location
+        - name: VECTOR_DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: hn-rank-secrets
+              key: vector-db-url
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hn-rank
+spec:
+  selector:
+    app: hn-rank
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: LoadBalancer 
