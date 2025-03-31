@@ -4,6 +4,7 @@ from transformers import GPT2TokenizerFast
 import torch
 import os
 import logging
+from sentence_transformers import SentenceTransformer
 
 # Configure logging
 logging.basicConfig(
@@ -15,46 +16,38 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Global variables for model and tokenizer
-tokenizer = None
+model = None
 dimension = 1536  # text-embedding-ada-002 dimension size
 
-# Initialize tokenizer
-def load_tokenizer():
-    global tokenizer
-    logger.info("Loading tokenizer...")
+# Initialize model
+def load_model():
+    global model
+    logger.info("Loading sentence transformer model...")
     try:
-        tokenizer = GPT2TokenizerFast.from_pretrained('Xenova/text-embedding-ada-002')
-        logger.info("Tokenizer loaded successfully")
+        model = SentenceTransformer('all-MiniLM-L6-v2')
+        logger.info("Model loaded successfully")
     except Exception as e:
-        logger.error(f"Error loading tokenizer: {e}")
+        logger.error(f"Error loading model: {e}")
         raise
 
-# Generate a simple embedding using token IDs as features
+# Generate embedding using sentence transformer
 def generate_embedding(text):
     if not text:
         return np.zeros(dimension, dtype=np.float32)
     
-    # Tokenize the text
-    token_ids = tokenizer.encode(text, truncation=True, max_length=8191)
+    # Generate embedding using the model
+    embedding = model.encode(text, convert_to_numpy=True)
     
-    # Generate simple embedding by normalizing token IDs
-    # Note: In a production environment, you would use a real embedding model
-    # This is a simplistic approach that maps token IDs to a feature space
-    feat_vec = np.zeros(dimension, dtype=np.float32)
+    # Ensure the embedding is the correct dimension
+    if embedding.shape[0] != dimension:
+        logger.warning(f"Embedding dimension mismatch. Expected {dimension}, got {embedding.shape[0]}")
+        # Pad or truncate if necessary
+        if embedding.shape[0] < dimension:
+            embedding = np.pad(embedding, (0, dimension - embedding.shape[0]))
+        else:
+            embedding = embedding[:dimension]
     
-    # Map tokens to the embedding space
-    for i, token_id in enumerate(token_ids):
-        # Distribute token information across the vector
-        # Using modulo to wrap around the dimension
-        pos = i % dimension
-        feat_vec[pos] += np.float32(token_id) / 50000.0  # Normalize by vocab size
-    
-    # L2 normalize the vector
-    norm = np.linalg.norm(feat_vec)
-    if norm > 0:
-        feat_vec = feat_vec / norm
-    
-    return feat_vec
+    return embedding.astype(np.float32)
 
 @app.route('/embed', methods=['POST'])
 def embed():
@@ -82,8 +75,8 @@ def embed():
 def health():
     return jsonify({'status': 'ok'})
 
-# Load tokenizer on startup
-load_tokenizer()
+# Load model on startup
+load_model()
 
 # If running directly, not through gunicorn
 if __name__ == '__main__':
