@@ -4,22 +4,22 @@ import (
 	"net/http"
 
 	"github.com/cjhammons/hacker-news-rank/internal/db"
-	"github.com/cjhammons/hacker-news-rank/internal/vertex"
+	"github.com/cjhammons/hacker-news-rank/internal/embedding"
 	"github.com/gin-gonic/gin"
 )
 
 // SearchHandler handles the /search endpoint.
 // It generates embeddings for the query and finds similar stories.
 type SearchHandler struct {
-	vertexClient *vertex.Client
-	vectorDB     db.VectorDB
+	embeddingClient *embedding.Client
+	vectorDB        db.VectorDB
 }
 
 // NewSearchHandler creates a new SearchHandler instance.
-func NewSearchHandler(vertexClient *vertex.Client, vectorDB db.VectorDB) *SearchHandler {
+func NewSearchHandler(embeddingClient *embedding.Client, vectorDB db.VectorDB) *SearchHandler {
 	return &SearchHandler{
-		vertexClient: vertexClient,
-		vectorDB:     vectorDB,
+		embeddingClient: embeddingClient,
+		vectorDB:        vectorDB,
 	}
 }
 
@@ -33,7 +33,7 @@ func (h *SearchHandler) HandleSearch(c *gin.Context) {
 	}
 
 	// Generate embedding for the query
-	embedding, err := h.vertexClient.GenerateEmbedding(c.Request.Context(), query)
+	embedding, err := h.embeddingClient.GenerateEmbedding(c.Request.Context(), query)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate embedding"})
 		return

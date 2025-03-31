@@ -11,7 +11,7 @@ import (
 
 	"github.com/cjhammons/hacker-news-rank/cmd/api/routes"
 	"github.com/cjhammons/hacker-news-rank/internal/db"
-	"github.com/cjhammons/hacker-news-rank/internal/vertex"
+	"github.com/cjhammons/hacker-news-rank/internal/embedding"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -24,13 +24,12 @@ func main() {
 		log.Printf("Warning: Error loading .env file: %v", err)
 	}
 
-	// Create VertexAI client
-	ctx := context.Background()
-	vertexClient, err := vertex.NewClient(ctx)
+	// Create embedding client
+	embeddingClient, err := embedding.NewClient()
 	if err != nil {
-		log.Fatalf("Failed to create VertexAI client: %v", err)
+		log.Fatalf("Failed to create embedding client: %v", err)
 	}
-	defer vertexClient.Close()
+	defer embeddingClient.Close()
 
 	// Create SQLite database
 	dbPath := os.Getenv("SQLITE_DB_PATH")
@@ -65,14 +64,14 @@ func main() {
 	})
 
 	// Initialize route handlers
-	searchHandler := routes.NewSearchHandler(vertexClient, vectorDB)
+	searchHandler := routes.NewSearchHandler(embeddingClient, vectorDB)
 
 	// Define routes
 	router.GET("/search", searchHandler.HandleSearch)
 
 	// Start server
 	srv := &http.Server{
-		Addr:    ":8081",
+		Addr:    ":8082",
 		Handler: router,
 	}
 
