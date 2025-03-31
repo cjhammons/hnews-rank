@@ -2,3 +2,4 @@
 vector-user.json
 __pycache__
 venv/
+python_embedding/venv/
