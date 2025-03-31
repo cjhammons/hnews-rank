@@ -1,2 +1,4 @@
 .env
 vector-user.json
+__pycache__
+venv/

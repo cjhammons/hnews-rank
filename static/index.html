@@ -92,8 +92,8 @@
             document.getElementById('results').innerHTML = '';
 
             try {
-                console.log('Fetching from:', `http://localhost:8081/search?q=${encodeURIComponent(query)}`);
-                const response = await fetch(`http://localhost:8081/search?q=${encodeURIComponent(query)}`);
+                console.log('Fetching from:', `/search?q=${encodeURIComponent(query)}`);
+                const response = await fetch(`/search?q=${encodeURIComponent(query)}`);
                 console.log('Response status:', response.status);
                 
                 if (!response.ok) {

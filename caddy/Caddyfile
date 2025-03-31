@@ -1,0 +1,30 @@
+{
+    # Global options
+    http_port 90
+    https_port 150
+    # Use insecure dev settings for local development
+    debug
+}
+
+hn.cjhammons.com:90 {
+    # Serve over HTTP (no TLS) for local development
+    reverse_proxy localhost:8081
+}
+
+hn.cjhammons.com:150 {
+    reverse_proxy localhost:8081
+    # Use self-signed certificate with explicit settings
+    tls internal {
+        protocols tls1.2 tls1.3
+    }
+}
+
+# Redirect www subdomain to non-www
+www.hn.cjhammons.com:90 {
+    redir http://hn.cjhammons.com:90{uri}
+}
+
+www.hn.cjhammons.com:150 {
+    redir https://hn.cjhammons.com:150{uri}
+    tls internal
+}
