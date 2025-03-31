@@ -1,6 +1,8 @@
 # HN Story Ranker
 
-A service that ranks Hacker News stories based on user interests using vector similarity search.
+A service tat ranks Hacker News stories based on user interests using vector similarity search.
+
+- [Live Demo](https://hn.cjhammons.com:150/)
 
 ## Features
 
