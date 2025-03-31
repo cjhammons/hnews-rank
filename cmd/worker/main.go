@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/cjhammons/hacker-news-rank/internal/db"
+	"github.com/cjhammons/hacker-news-rank/internal/embedding"
 	"github.com/cjhammons/hacker-news-rank/internal/hn"
-	"github.com/cjhammons/hacker-news-rank/internal/vertex"
 	"github.com/joho/godotenv"
 )
 
@@ -22,12 +22,12 @@ func main() {
 
 	ctx := context.Background()
 
-	// Initialize clients
-	vertexClient, err := vertex.NewClient(ctx)
+	// Initialize embedding client
+	embeddingClient, err := embedding.NewClient()
 	if err != nil {
-		log.Fatalf("Failed to create VertexAI client: %v", err)
+		log.Fatalf("Failed to create embedding client: %v", err)
 	}
-	defer vertexClient.Close()
+	defer embeddingClient.Close()
 
 	dbPath := os.Getenv("SQLITE_DB_PATH")
 	if dbPath == "" {
@@ -72,14 +72,13 @@ func main() {
 				text += " " + story.Text
 			}
 
-			embedding, err := vertexClient.GenerateEmbedding(ctx, text)
+			embedding, err := embeddingClient.GenerateEmbedding(ctx, text)
 			if err != nil {
 				log.Printf("Error generating embedding for story %d: %v", id, err)
-				// If we hit the quota, wait longer before retrying
-				if err.Error() == "rpc error: code = ResourceExhausted" {
-					log.Println("Hit model quota, waiting 5 minutes before retrying...")
-					time.Sleep(5 * time.Minute)
-					continue
+				// If the service is unavailable, wait before retrying
+				if os.IsTimeout(err) || err.Error() == "connection refused" {
+					log.Println("Embedding service unavailable, waiting 1 minute before retrying...")
+					time.Sleep(time.Minute)
 				}
 				continue
 			}
@@ -96,8 +95,8 @@ func main() {
 
 			log.Printf("Successfully processed story %d", id)
 
-			// Sleep for 1 second between stories to avoid hitting the quota
-			time.Sleep(time.Second)
+			// Sleep for a short time between stories to avoid overloading the embedding service
+			time.Sleep(100 * time.Millisecond)
 		}
 
 		// Wait 5 minutes before checking for new stories
