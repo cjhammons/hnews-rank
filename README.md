@@ -121,24 +121,49 @@ The architecture supports several evolution paths:
 
 - `SQLITE_DB_PATH`: Path to SQLite database file
 
-## Development
+## Setup & Running
 
-1. Install dependencies:
+1. Run the setup script to prepare your environment:
    ```bash
-   go mod download
+   ./scripts/setup.sh
+   ```
+   
+   This script will:
+   - Install Go dependencies
+   - Set up a Python virtual environment and install requirements
+   - Create necessary directories (data, run)
+   - Create a default .env file if needed
+
+2. Start all services with a single command:
+   ```bash
+   ./scripts/run.sh
+   ```
+   
+   This will start:
+   - Python embedding service on port 6000
+   - Worker service for fetching and processing HN stories
+   - API server on port 8080
+
+3. Access the application:
+   - Web interface: http://localhost:8080
+   - API: http://localhost:8080/search
+
+4. To stop all services:
+   ```bash
+   ./scripts/stop.sh
    ```
 
-2. Run the worker:
+5. View logs:
    ```bash
-   go run cmd/worker/main.go
+   # API logs
+   tail -f run/api.log
+   
+   # Worker logs
+   tail -f run/worker.log
+   
+   # Embedding service logs
+   tail -f run/embedding.log
    ```
-
-3. Run the API server:
-   ```bash
-   go run cmd/api/main.go
-   ```
-
-4. Visit http://localhost:8080 in your browser
 
 ## Access
 
@@ -146,47 +171,6 @@ The service is accessible at:
 ```
 https://hn.cjhammons.com
 ```
-
-## Deployment
-
-The project includes scripts to simplify building and running the application with Docker:
-
-1. Build Docker images:
-   ```bash
-   # Build both API and Worker images
-   ./scripts/build.sh
-   ```
-
-2. Run with Docker:
-   ```bash
-   # Run both API and Worker containers
-   ./scripts/run.sh
-   ```
-   
-   Or build and run in one step:
-   ```bash
-   # Build and run in one step
-   ./scripts/run.sh build
-   ```
-
-3. Access the application:
-   - Web interface: http://localhost:8080
-   - API: http://localhost:8080/search
-
-4. View container logs:
-   ```bash
-   # API logs
-   docker logs -f hn-api
-   
-   # Worker logs
-   docker logs -f hn-worker
-   ```
-
-5. Stop and remove containers:
-   ```bash
-   docker stop hn-api hn-worker
-   docker rm hn-api hn-worker
-   ```
 
 ## API
 
