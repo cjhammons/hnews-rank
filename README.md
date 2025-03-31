@@ -134,23 +134,40 @@ The architecture supports several evolution paths:
    - Create necessary directories (data, run)
    - Create a default .env file if needed
 
-2. Start all services with a single command:
+2. Choose how to start the services based on your needs:
+
+   **Option A: Basic Local Setup** - For development with core services only
    ```bash
-   ./scripts/run.sh
+   ./scripts/run-local.sh
    ```
    
-   This will start:
-   - Python embedding service on port 6000
+   This starts:
+   - API server on port 8082
    - Worker service for fetching and processing HN stories
-   - API server on port 8080
+   - Both accessible via localhost only
+
+   **Option B: Complete Environment** - For full functionality with domain access
+   ```bash
+   ./scripts/start-all.sh
+   ```
+   
+   This starts:
+   - Python embedding service
+   - API server and Worker service (via run-local.sh)
+   - Reverse proxy for domain access
+   - Makes the application available at a configured domain with both HTTP and HTTPS
 
 3. Access the application:
-   - Web interface: http://localhost:8080
-   - API: http://localhost:8080/search
+   - When using run-local.sh: http://localhost:8082
+   - When using start-all.sh: http://hn.cjhammons.com:90 or https://hn.cjhammons.com:150
 
-4. To stop all services:
+4. To stop services:
    ```bash
-   ./scripts/stop.sh
+   # If using run-local.sh
+   ./scripts/stop-local.sh
+   
+   # If using start-all.sh
+   ./scripts/stop-all.sh
    ```
 
 5. View logs:
@@ -163,6 +180,15 @@ The architecture supports several evolution paths:
    
    # Embedding service logs
    tail -f run/embedding.log
+   ```
+
+6. Check service status:
+   ```bash
+   # If using run-local.sh
+   ./scripts/status-local.sh
+   
+   # If using start-all.sh
+   ./scripts/status-all.sh
    ```
 
 ## Access
