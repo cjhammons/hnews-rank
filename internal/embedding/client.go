@@ -94,7 +94,7 @@ func (c *Client) GenerateEmbedding(ctx context.Context, text string) ([]float32,
 	return embedResp.Embedding, nil
 }
 
-// Close is a no-op in this client but is provided for API compatibility with the vertex client.
+// Close is a no-op in this client.
 func (c *Client) Close() {
 	// Nothing to close
 }
